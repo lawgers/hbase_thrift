@@ -24,15 +24,21 @@ class TDeleteType:
   """
   DELETE_COLUMN = 0
   DELETE_COLUMNS = 1
+  DELETE_FAMILY = 2
+  DELETE_FAMILY_VERSION = 3
 
   _VALUES_TO_NAMES = {
     0: "DELETE_COLUMN",
     1: "DELETE_COLUMNS",
+    2: "DELETE_FAMILY",
+    3: "DELETE_FAMILY_VERSION",
   }
 
   _NAMES_TO_VALUES = {
     "DELETE_COLUMN": 0,
     "DELETE_COLUMNS": 1,
+    "DELETE_FAMILY": 2,
+    "DELETE_FAMILY_VERSION": 3,
   }
 
 class TDurability:
@@ -60,6 +66,25 @@ class TDurability:
     "ASYNC_WAL": 2,
     "SYNC_WAL": 3,
     "FSYNC_WAL": 4,
+  }
+
+class TConsistency:
+  """
+  Specify Consistency:
+   - STRONG means reads only from primary region
+   - TIMELINE means reads might return values from secondary region replicas
+  """
+  STRONG = 1
+  TIMELINE = 2
+
+  _VALUES_TO_NAMES = {
+    1: "STRONG",
+    2: "TIMELINE",
+  }
+
+  _NAMES_TO_VALUES = {
+    "STRONG": 1,
+    "TIMELINE": 2,
   }
 
 class TReadType:
@@ -521,17 +546,20 @@ class TResult:
   Attributes:
    - row
    - columnValues
+   - stale
   """
 
   thrift_spec = (
     None, # 0
     (1, TType.STRING, 'row', None, None, ), # 1
     (2, TType.LIST, 'columnValues', (TType.STRUCT,(TColumnValue, TColumnValue.thrift_spec)), None, ), # 2
+    (3, TType.BOOL, 'stale', None, False, ), # 3
   )
 
-  def __init__(self, row=None, columnValues=None,):
+  def __init__(self, row=None, columnValues=None, stale=thrift_spec[3][4],):
     self.row = row
     self.columnValues = columnValues
+    self.stale = stale
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -558,6 +586,11 @@ class TResult:
           iprot.readListEnd()
         else:
           iprot.skip(ftype)
+      elif fid == 3:
+        if ftype == TType.BOOL:
+          self.stale = iprot.readBool()
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -579,6 +612,10 @@ class TResult:
         iter6.write(oprot)
       oprot.writeListEnd()
       oprot.writeFieldEnd()
+    if self.stale is not None:
+      oprot.writeFieldBegin('stale', TType.BOOL, 3)
+      oprot.writeBool(self.stale)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -592,6 +629,7 @@ class TResult:
     value = 17
     value = (value * 31) ^ hash(self.row)
     value = (value * 31) ^ hash(self.columnValues)
+    value = (value * 31) ^ hash(self.stale)
     return value
 
   def __repr__(self):
@@ -766,6 +804,8 @@ class TGet:
    - filterString
    - attributes
    - authorizations
+   - consistency
+   - targetReplicaId
   """
 
   thrift_spec = (
@@ -778,9 +818,11 @@ class TGet:
     (6, TType.STRING, 'filterString', None, None, ), # 6
     (7, TType.MAP, 'attributes', (TType.STRING,None,TType.STRING,None), None, ), # 7
     (8, TType.STRUCT, 'authorizations', (TAuthorization, TAuthorization.thrift_spec), None, ), # 8
+    (9, TType.I32, 'consistency', None, None, ), # 9
+    (10, TType.I32, 'targetReplicaId', None, None, ), # 10
   )
 
-  def __init__(self, row=None, columns=None, timestamp=None, timeRange=None, maxVersions=None, filterString=None, attributes=None, authorizations=None,):
+  def __init__(self, row=None, columns=None, timestamp=None, timeRange=None, maxVersions=None, filterString=None, attributes=None, authorizations=None, consistency=None, targetReplicaId=None,):
     self.row = row
     self.columns = columns
     self.timestamp = timestamp
@@ -789,6 +831,8 @@ class TGet:
     self.filterString = filterString
     self.attributes = attributes
     self.authorizations = authorizations
+    self.consistency = consistency
+    self.targetReplicaId = targetReplicaId
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -853,6 +897,16 @@ class TGet:
           self.authorizations.read(iprot)
         else:
           iprot.skip(ftype)
+      elif fid == 9:
+        if ftype == TType.I32:
+          self.consistency = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 10:
+        if ftype == TType.I32:
+          self.targetReplicaId = iprot.readI32()
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -902,6 +956,14 @@ class TGet:
       oprot.writeFieldBegin('authorizations', TType.STRUCT, 8)
       self.authorizations.write(oprot)
       oprot.writeFieldEnd()
+    if self.consistency is not None:
+      oprot.writeFieldBegin('consistency', TType.I32, 9)
+      oprot.writeI32(self.consistency)
+      oprot.writeFieldEnd()
+    if self.targetReplicaId is not None:
+      oprot.writeFieldBegin('targetReplicaId', TType.I32, 10)
+      oprot.writeI32(self.targetReplicaId)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -921,6 +983,8 @@ class TGet:
     value = (value * 31) ^ hash(self.filterString)
     value = (value * 31) ^ hash(self.attributes)
     value = (value * 31) ^ hash(self.authorizations)
+    value = (value * 31) ^ hash(self.consistency)
+    value = (value * 31) ^ hash(self.targetReplicaId)
     return value
 
   def __repr__(self):
@@ -1587,6 +1651,8 @@ class TScan:
    - colFamTimeRangeMap
    - readType
    - limit
+   - consistency
+   - targetReplicaId
   """
 
   thrift_spec = (
@@ -1606,9 +1672,11 @@ class TScan:
     (13, TType.MAP, 'colFamTimeRangeMap', (TType.STRING,None,TType.STRUCT,(TTimeRange, TTimeRange.thrift_spec)), None, ), # 13
     (14, TType.I32, 'readType', None, None, ), # 14
     (15, TType.I32, 'limit', None, None, ), # 15
+    (16, TType.I32, 'consistency', None, None, ), # 16
+    (17, TType.I32, 'targetReplicaId', None, None, ), # 17
   )
 
-  def __init__(self, startRow=None, stopRow=None, columns=None, caching=None, maxVersions=thrift_spec[5][4], timeRange=None, filterString=None, batchSize=None, attributes=None, authorizations=None, reversed=None, cacheBlocks=None, colFamTimeRangeMap=None, readType=None, limit=None,):
+  def __init__(self, startRow=None, stopRow=None, columns=None, caching=None, maxVersions=thrift_spec[5][4], timeRange=None, filterString=None, batchSize=None, attributes=None, authorizations=None, reversed=None, cacheBlocks=None, colFamTimeRangeMap=None, readType=None, limit=None, consistency=None, targetReplicaId=None,):
     self.startRow = startRow
     self.stopRow = stopRow
     self.columns = columns
@@ -1624,6 +1692,8 @@ class TScan:
     self.colFamTimeRangeMap = colFamTimeRangeMap
     self.readType = readType
     self.limit = limit
+    self.consistency = consistency
+    self.targetReplicaId = targetReplicaId
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -1730,6 +1800,16 @@ class TScan:
           self.limit = iprot.readI32()
         else:
           iprot.skip(ftype)
+      elif fid == 16:
+        if ftype == TType.I32:
+          self.consistency = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 17:
+        if ftype == TType.I32:
+          self.targetReplicaId = iprot.readI32()
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -1811,6 +1891,14 @@ class TScan:
       oprot.writeFieldBegin('limit', TType.I32, 15)
       oprot.writeI32(self.limit)
       oprot.writeFieldEnd()
+    if self.consistency is not None:
+      oprot.writeFieldBegin('consistency', TType.I32, 16)
+      oprot.writeI32(self.consistency)
+      oprot.writeFieldEnd()
+    if self.targetReplicaId is not None:
+      oprot.writeFieldBegin('targetReplicaId', TType.I32, 17)
+      oprot.writeI32(self.targetReplicaId)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -1835,6 +1923,8 @@ class TScan:
     value = (value * 31) ^ hash(self.colFamTimeRangeMap)
     value = (value * 31) ^ hash(self.readType)
     value = (value * 31) ^ hash(self.limit)
+    value = (value * 31) ^ hash(self.consistency)
+    value = (value * 31) ^ hash(self.targetReplicaId)
     return value
 
   def __repr__(self):

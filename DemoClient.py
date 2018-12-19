@@ -44,11 +44,12 @@ sys.path.append(gen_py_path)
 from hbase import THBaseService
 from hbase.ttypes import *
 
-print "Thrift2 Demo"
-print "This demo assumes you have a table called \"example\" with a column family called \"family1\""
+print("Thrift2 Demo")
+print("This demo assumes you have a table called \"example\" with a column family called \"family1\"")
 
-host = "localhost"
+host = "cnndcphad005.kaiser.org"
 port = 9090
+# port = 2181
 framed = False
 
 socket = TSocket.TSocket(host, port)
@@ -64,13 +65,13 @@ transport.open()
 table = "example"
 
 put = TPut(row="row1", columnValues=[TColumnValue(family="family1",qualifier="qualifier1",value="value1")])
-print "Putting:", put
+print("Putting:", put)
 client.put(table, put)
 
 get = TGet(row="row1")
-print "Getting:", get
+print("Getting:", get)
 result = client.get(table, get)
 
-print "Result:", result
+print("Result:", result)
 
 transport.close()
