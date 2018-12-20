@@ -37,6 +37,7 @@ from thrift.transport import TTransport
 from thrift.transport import TSocket
 from thrift.transport import THttpClient
 from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TCompactProtocol
 
 # Add path for local "gen-py/hbase" for the pre-generated module
 gen_py_path = os.path.abspath('gen-py')
@@ -47,18 +48,24 @@ from hbase.ttypes import *
 print("Thrift2 Demo")
 print("This demo assumes you have a table called \"example\" with a column family called \"family1\"")
 
+LINE_DOMAIN = "http://cnndcphad005.kaiser.org"
+LINE_HTTP_URL = LINE_DOMAIN + "/api/v4/TalkService.do"
+
 host = "cnndcphad005.kaiser.org"
 port = 9090
-# port = 2181
-framed = False
+framed = True
 
-socket = TSocket.TSocket(host, port)
-if framed:
-  transport = TTransport.TFramedTransport(socket)
-else:
-  transport = TTransport.TBufferedTransport(socket)
+# Make socket
+transport = TSocket.TSocket(host, port)
+
+# Buffering is critical. Raw sockets are very slow
+transport = TTransport.TBufferedTransport(transport)
+
+# Wrap in a protocol
 protocol = TBinaryProtocol.TBinaryProtocol(transport)
-client = THBaseService.Client(protocol)
+
+# Create a client to use the protocol encoder
+client = THttpClient.THttpClient(protocol)
 
 transport.open()
 
