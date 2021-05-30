@@ -72,5 +72,5 @@ print "Getting:", get
 result = client.get(table, get)
 
 print "Result:", result
-
+#This is a test line
 transport.close()
